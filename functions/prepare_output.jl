@@ -15,11 +15,12 @@ function clean_output(X,N,ts,pp,distance)
     return alloc
 end
 
-function sales_output(alloc)
+function sales_output(alloc::DataFrame)
     sales_agents = combine(groupby(alloc, :area), :time => sum => :hours, :profit => sum => :profit, nrow => :nr_kge)
-    sales_agents[:,:agents] = sales_agents[:,:hours]./max_time
-    sales_agents[:,:agent_profit] = sales_agents[:,:profit]./sales_agents[:,:nr_kge]
-    sales_agents = round.(sales_agents, digits = 3)
+    sales_agents[:,:agents] = round.(sales_agents[:,:hours]./max_time,digits = 2)
+    sales_agents[:,:agent_profit] = round.(sales_agents[:,:profit]./sales_agents[:,:nr_kge],digits=1)
+    sales_agents[:,:profit] = round.(Int64, sales_agents[:,:profit])
+    sales_agents[:,:hours] = round.(Int64, sales_agents[:,:profit])
     return sales_agents
 end
 

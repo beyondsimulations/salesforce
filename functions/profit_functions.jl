@@ -1,32 +1,21 @@
 # Collection of all profit functions
-
+## currently used profit functions
+### calculate the beta for each profit function
 function beta(distance,i,j)
     0.1 + min(0.9,2*distance[i,j]/800)
 end
 
-# profit
-function profit_plus(α,μ,people,β,b)
-    α * μ * people * (1-β)^b # * t^b
-end
-
-# travel costs
-function profit_minus(β,h,g)
-    (h * β + g) # * t
-end
-
-## 1 derivation of profit
-function profit_der(α,μ,people,β,b)
-    α * μ * people * (1-β)^(b) * b # * t^(b-1)
-end
-
+### calculate the time that needs to be spend for the max profit
 function profit_time(α,μ,people,β,b,h,g)
     ((h * β + g)/(α * μ * people * (1-β)^(b) * b))^(1/(b-1))
 end
 
+### calculate the max profit of each area
 function profit_potential(α,μ,people,β,b,h,g,t)
     α * μ * people * (1-β)^b * t^b - (h * β + g) * t
 end
 
+## 1 derivation of profit potential
 function profit_potential_der(α,μ,people,β,b,h,g,t)
-    α * μ * people * (1-β)^b * b * t^(b-1) - (h * β + g)
+    α * μ * people * (1-β)^b * b * t^(b-1) - (h * β + g) * 1
 end

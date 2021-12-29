@@ -1,43 +1,58 @@
-function optimisation_loc2(N,pp,distance,max_drive,fix,potloc,max_time,ts)
+function optimisation_salesforce(hexnum,pp,distance,max_drive,fix,potloc,max_time,ts)
     # Location Model
-    loc2 = Model(GAMS.Optimizer)
+    salesforce = Model(GAMS.Optimizer)
+    set_silent(salesforce)
 
-    set_optimizer_attribute(loc2, GAMS.ModelType(), "MIP")
-    set_optimizer_attribute(loc2, "Solver", "CPLEX")
-    set_optimizer_attribute(loc2, "OptCR",   0.10)
-    set_optimizer_attribute(loc2, "ResLim",  10800)
-    set_optimizer_attribute(loc2, "Threads", 8)
-    set_optimizer_attribute(loc2, "NodLim",  1000000)
-    set_optimizer_attribute(loc2, "Iterlim", 1000000)
+    set_optimizer_attribute(salesforce, GAMS.ModelType(), "MIP")
+    set_optimizer_attribute(salesforce, "Solver", "CPLEX")
+    set_optimizer_attribute(salesforce, "OptCR",   0.10)
+    set_optimizer_attribute(salesforce, "ResLim",  10800)
+    set_optimizer_attribute(salesforce, "Threads", 8)
+    set_optimizer_attribute(salesforce, "NodLim",  1000000)
+    set_optimizer_attribute(salesforce, "Iterlim", 1000000)
 
-    @variable(loc2, Y[1:N,1:N], Bin)
+    @variable(salesforce, Y[1:hexnum,1:hexnum], Bin)
 
-    @objective(loc2,
+    @objective(salesforce,
             Max,
-            sum(pp[i,j] * Y[i,j] for i = 1:N, j = 1:N if distance[i,j] < max_drive) - sum(fix * Y[i,i] for i = 1:N)
+            sum(pp[i,j] * Y[i,j] for i = 1:hexnum, j = 1:hexnum if distance[i,j] < max_drive) - sum(fix * Y[i,i] for i = 1:hexnum)
     )
 
-    @constraints(loc2,
+    @constraints(salesforce,
                 begin
-                tic[j = 1:N], 
-                    sum(Y[i,j] for i = 1:N) <= 1;
+                tic[j = 1:hexnum], 
+                    sum(Y[i,j] for i = 1:hexnum) <= 1;
 
-                cut[i = 1:N, j = 1:N; distance[i,j] < max_drive], 
+                cut[i = 1:hexnum, j = 1:hexnum; distance[i,j] < max_drive], 
                     Y[i,j] - Y[i,i] <= 0;
 
-                rmv[i = 1:N],
+                rmv[i = 1:hexnum],
                     Y[i,i] <= potloc[i];
                 
-                mxt[i = 1:N; potloc[i] == 1],
-                   sum(ts[i,j] * Y[i,j] for j = 1:N) <= max_time;
+                mxt[i = 1:hexnum; potloc[i] == 1],
+                   sum(ts[i,j] * Y[i,j] for j = 1:hexnum) <= max_time;
 
                 end
     )
 
-    JuMP.optimize!(loc2)
+    print("\n JuMP model sucessfully build. Starting optimisation.")
 
-    gap = abs(objective_bound(loc2)-objective_value(loc2))/abs(objective_value(loc2)+0.00000000001)
-    objval = objective_value(loc2)
+## Start the optimisation
+    JuMP.optimize!(salesforce)
+
+    print("\n Optimisation finished.")
+
+## Check whether a solution was found
+    if termination_status(districting) == MOI.OPTIMAL
+        print("\n Solution is optimal.")
+    elseif termination_status(districting) == MOI.TIME_LIMIT && has_values(districting)
+        print("\n Solution is suboptimal due to a time limit, but a primal solution is available.")
+    else
+        error("\n The model was not solved correctly.")
+    end
+
+    gap = abs(objective_bound(salesforce)-objective_value(salesforce))/abs(objective_value(salesforce)+0.00000000001)
+    objval = objective_value(salesforce)
     
     return Y,gap,objval
 end
