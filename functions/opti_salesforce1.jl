@@ -1,4 +1,4 @@
-function optimisation_loc1(N,pp,distance,max_drive,fix,potloc)
+function optimisation_salesforce1(N,pp,distance,max_drive,fix,potloc)
     # Location Model
     salesforce = Model(GAMS.Optimizer)
     set_silent(salesforce)
@@ -11,14 +11,7 @@ function optimisation_loc1(N,pp,distance,max_drive,fix,potloc)
     set_optimizer_attribute(salesforce, "NodLim",  1000000)
     set_optimizer_attribute(salesforce, "Iterlim", 1000000)
 
-    @variable(salesforce, X[1:N,1:N], Bin)
-
-    for i = 1:N
-        for j = 1:N
-            set_upper_bound(X[i,j], potloc[i])
-        end
-    end
-
+    @variable(salesforce, X[1:N,1:N], Bin, container=Array)
 
     @objective(salesforce,
             Max,
@@ -57,6 +50,15 @@ function optimisation_loc1(N,pp,distance,max_drive,fix,potloc)
 
     gap = abs(objective_bound(salesforce)-objective_value(salesforce))/abs(objective_value(salesforce)+0.00000000001)
     objval = objective_value(salesforce)
+
+    X_opt = Array{Int64,2}(undef,hexnum,hexnum) .= 0
+    for i = 1:hexnum
+        for j = 1:hexnum
+            if value(X[i,j]) == 1
+                X_opt[i,j] = 1
+            end
+        end
+    end
     
     return X,gap,objval
 end

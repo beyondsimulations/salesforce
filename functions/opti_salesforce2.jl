@@ -1,4 +1,4 @@
-function optimisation_salesforce(hexnum,pp,distance,max_drive,fix,potloc,max_time,ts)
+function optimisation_salesforce2(hexnum,pp,distance,max_drive,fix,potloc,max_time,ts)
     # Location Model
     salesforce = Model(GAMS.Optimizer)
     set_silent(salesforce)
