@@ -27,7 +27,7 @@ function plot_generation(alloc::DataFrame)
         normalized_values_time = normalize(alloc.time)
         normalized_values_area = equalize(alloc.area)
 
-        colors_time = Array([cgrad(:matter, 10, categorical = false, rev = true)[value] for value in normalized_values_time])
+        colors_time = Array([cgrad(:matter, scale = :exp, categorical = false, rev = true)[value] for value in normalized_values_time])
         colors_area = Array([cgrad(:Pastel1_9, length(unique(alloc.area)), categorical = true)[value] for value in normalized_values_area])
         
         for x = 1:nrow(alloc)
