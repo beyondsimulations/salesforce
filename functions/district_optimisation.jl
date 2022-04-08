@@ -42,10 +42,13 @@ function districting_model(optcr::Float64,
     end
 
 ## Initialise the decision variables Y and X
-    @variable(salesforce, Y[1:hex], Bin, upper_bound = potloc[i])
+    @variable(salesforce, Y[1:hex], Bin)
     @variable(salesforce, X[1:hex,1:hex], Bin)
 
     for i = 1:hex
+        if potential_locations[i] == 0
+            set_upper_bound(Y[i], 0)
+        end
         for j = 1:hex
             if drivingtime[i,j] > max_drive
                 set_upper_bound(X[i,j], 0)
@@ -55,15 +58,13 @@ function districting_model(optcr::Float64,
     
 ## Define the objective function                
     @objective(salesforce, Max,
-                    sum(profit[i,j] * X[i,j] for i = 1:hex, j = 1:hex if drivingtime[i,j] < max_drive && potential_locations[i] == 1) - sum(fix * X[i,i] for i = 1:hex if potential_locations[i]==1))
+                    sum(profit[i,j] * X[i,j] for i = 1:hex, j = 1:hex if drivingtime[i,j] < max_drive && potential_locations[i] == 1) - sum(fix * Y[i] for i = 1:hex if potential_locations[i]==1))
 
 ## Define the p-median constraints
     @constraint(salesforce, allocate_one[j = 1:hex],
                     sum(X[i,j] for i = 1:hex if potential_locations[i] == 1) == 1)
     @constraint(salesforce, cut_nocenter[i = 1:hex, j = 1:hex; drivingtime[i,j] <= max_drive && potential_locations[i] == 1],
                     X[i,j] - Y[i] <= 0)
-    @constraint(salesforce, fix_above_drive[i = 1:hex, j = 1:hex; drivingtime[i,j] > max_drive || potential_locations[i] == 0],
-                    X[i,j] == 0)
 
 ## Define the contiguity and compactness constraints
     if compactness == "C0"
@@ -111,14 +112,14 @@ function districting_model(optcr::Float64,
     objval = objective_value(salesforce)
 
 ## Save the arrays in the appropriate form
-    X_opt = Array{Int64,2}(undef,hexnum,hexnum) .= 0
-    Y_opt = Vector{Int64}(undef,hexnum) .= 0
-    for i = 1:hexnum
-        if value(Y[i,j]) == 1
+    X_opt = Array{Int64,2}(undef,hex,hex) .= 0
+    Y_opt = Vector{Int64}(undef,hex) .= 0
+    for i = 1:hex
+        if value(Y[i]) > 0
             Y_opt[i] = 1
         end
-        for j = 1:hexnum
-            if value(X[i,j]) == 1
+        for j = 1:hex
+            if value(X[i,j]) > 0
                 X_opt[i,j] = 1
             end
         end

@@ -2,7 +2,7 @@
 function random_locations(ratio_potloc::Float64, hexsize::Int64)
     potloc = Array{Int64,1}(undef,hexsize) .= 0
     while sum(potloc) < ratio_potloc * hexsize
-        potloc[rand(1:hexnum)] = 1
+        potloc[rand(1:hexsize)] = 1
     end
     return potloc
 end
@@ -15,7 +15,8 @@ function model_params(hexnum::Int64,
                       μ::Float64,
                       people::Vector{Float64},
                       b::Float64,
-                      h::Float64)
+                      h::Float64,
+                      mp::Float64)
     β   = Array{Float64,2}(undef,hexnum,hexnum) .= 0
     pp  = Array{Float64,2}(undef,hexnum,hexnum) .= 0
     ts  = Array{Float64,2}(undef,hexnum,hexnum) .= 0
@@ -24,9 +25,9 @@ function model_params(hexnum::Int64,
         for j = 1:hexnum
             if distance[i,j] < max_drive
                 β[i,j]  = beta(distance,i,j)
-                ts[i,j] = profit_time(α,μ,people[j],β[i,j],b,h,g)
+                ts[i,j] = profit_time(mp,α,μ,people[j],β[i,j],b,h,g)
                 pp[i,j] = profit_potential(α,μ,people[j],β[i,j],b,h,g,ts[i,j])
-                dr[i,j] = profit_potential_der(α,μ,people[j],β[i,j],b,h,g,ts[i,j])
+                dr[i,j] = profit_potential_der(mp,α,μ,people[j],β[i,j],b,h,g,ts[i,j])
             end
         end
     end

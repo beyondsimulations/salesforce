@@ -18,7 +18,7 @@ function equalize(vec)
     return vec
 end
             
-function plot_generation(alloc::DataFrame)
+function plot_generation(alloc::DataFrame,shape::Shapefile.Table)
     plot_area = plot(size=(500, 600), axis=false, ticks=false)
     plot_time = plot(size=(500, 600), axis=false, ticks=false)
     if length(unique(alloc.area)) > 1

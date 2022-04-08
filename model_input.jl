@@ -7,7 +7,7 @@ shape    = Shapefile.Table("data/geometry/grid_$hexsize.shp")
 # Sort and prepare the number of people
 people = people[sortperm(people[:,:index]),:]
 people = people[:,:ewz_real_sum]
-people = ceil.(people./10000, digits = 0)
+people = ceil.(people./500, digits = 0)
 
 # Sort and prepare the distance matrix 
 distance = transpose(distance)
