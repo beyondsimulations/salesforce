@@ -16,6 +16,7 @@ function model_params(hexnum::Int64,
                       people::Vector{Float64},
                       b::Float64,
                       h::Float64,
+                      g::Float64,
                       mp::Float64)
     β   = Array{Float64,2}(undef,hexnum,hexnum) .= 0
     pp  = Array{Float64,2}(undef,hexnum,hexnum) .= 0
@@ -30,11 +31,6 @@ function model_params(hexnum::Int64,
                 dr[i,j] = profit_potential_der(mp,α,μ,people[j],β[i,j],b,h,g,ts[i,j])
             end
         end
-    end
-    if -1 < sum(dr) < 1
-        print("\n Check: Profit Potential correct.")
-    else
-        error("\n Error in Profit Potential calculation: ",sum(dr),".")
     end
     return β,pp,ts
 end

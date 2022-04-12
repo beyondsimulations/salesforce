@@ -24,7 +24,15 @@ function sales_output(alloc::DataFrame)
     return sales_agents
 end
 
-function sales_output_full(alloc::DataFrame,sales_agents::DataFrame)
+function sales_output_full(alloc::DataFrame,
+                           sales_agents::DataFrame,
+                           people::Vector{Float64},
+                           β::Array{Float64,2},
+                           α::Float64,
+                           μ::Float64,
+                           b::Float64,
+                           h::Float64,
+                           g::Float64)
     sales = copy(sales_agents)
     sales[:,:factor_lo] = floor.(sales[:,:hours]/(max_time/parttime)) * (max_time/parttime) ./ sales[:,:hours]
     sales[:,:factor_up] = ceil.(sales[:,:hours]/(max_time/parttime))  * (max_time/parttime) ./ sales[:,:hours]

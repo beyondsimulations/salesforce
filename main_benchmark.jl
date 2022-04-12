@@ -5,30 +5,40 @@ include("functions/load_packages.jl")
 print("\n\n All neccessary functions are loaded.")
 
 # specify benchmark instances
-    grid_sizes = [60,50,40,30]
-    location_scales = [0.2,0.4,0.6,0.8,1.0]
+    grid_sizes           = [60,50,40,30]
+    location_scales      = [0.25,0.5,0.75,1.0]
+    profitscales         = [0.5,1.0,1.5,2.0]
+    cost_travelhour      = [10.0,20.0,30.0,40.0]
+    cost_workerhour      = [20.0,40.0,60.0,80.0]
     location_fixed_costs = [20000.0,30000.0,40000.0]
-
+    time_levels          = [400.0,800.0,1200.0,1600.0]            
+    
 # create a Dataframe for the results of the benchmark
-    benchmark = DataFrame(grid = Int64[], SCUs = Int64[], scale = Float64[], fix_costs = Float64[],
-                          duration = Float64[], objective = Float64[], 
-                          locations = Int64[], agents = Float64[], 
-                          agent_profit = Float64[], agent_profit_dev = Float64[])
+    benchmark = DataFrame(grid = Int64[], SCUs = Int64[], scaleIJ = Float64[], 
+                          scale_profit = Float64[], cost_travel = Float64[],
+                          cost_worker = Float64[], fix_costs = Float64[],
+                          workertime = Float64[], 
+                          duration = Float64[], objective_opt = Float64[],
+                          objective_heur = Float64[], locations = Int64[], 
+                          agents_opt = Float64[], agents_heur = Float64[], 
+                          agent_profit_dev_opt = Float64[], 
+                          agent_profit_dev_heur = Float64[])
 
 # Choose the marginal profit (mp = 0 for optimal profit)
     mp          = 0.00::Float64
 
 # Choose the parameters of the salesforcemodel
-    #hexsize     = 40::Int64         # size of the hexagons (30, 40, 50, 60)
-    h           = 20.0::Float64      # cost per hour of travel time
-    g           = 30.0::Float64      # cost per worker per hour
+    #hexsize     = 30::Int64          # size of the hexagons (30, 40, 50, 60)
+    #h           = 20.0::Float64      # cost per hour of travel time
+    #g           = 30.0::Float64      # cost per worker per hour
     α           = 10.0::Float64      # per unit profit contribution of sales
-    μ           = 1.0::Float64       # scaling parameter
+    #μ           = 1.0::Float64       # scaling parameter
     b           = 0.30::Float64      # calling time elasticity
-    #fix         = 20000.0::Float64  # fixed costs for one location
+    #fix         = 20000.0::Float64   # fixed costs for one location
     max_time    = 1600.0::Float64    # number of hours per salesforce personnel
+    parttime    = 1.0::Float64       # max. fraction of salesforce personnel
     max_drive   = 360.0::Float64     # max kilometers to drive
-    #pot_ratio   = 1.00::Float64     # ratio of potential locations to all BAs
+    #pot_ratio   = 1.00::Float64      # ratio of potential locations to all BAs
 
 # state the optimisation options
     optcr   = 0.000::Float64         # allowed gap
@@ -36,7 +46,7 @@ print("\n\n All neccessary functions are loaded.")
     cores   = 8::Int64               # number of CPU cores
     nodlim  = 1000000::Int64         # maximal number of nodes
     iterlim = 1000000::Int64         # maximal number of iterations
-    silent  = false::Bool             # state whether to surpress the optimisation log
+    silent  = true::Bool             # state whether to surpress the optimisation log
 
 # state whether to use CPLEX via GAMS or the open source solver CBC
     opensource = false
@@ -47,12 +57,24 @@ print("\n\n All neccessary functions are loaded.")
 # C2 = contiguity and normal ompactness constraints
 # C3 = contiguity and strong compactness constraints
 # For more details take a look at the article this program is based on
-    compactness = "C0"     
+    compactness = "C0"    
 
+# number of total benchmarks
+    total = length(grid_sizes)*length(location_scales)*length(profitscales)*
+            length(cost_travelhour)*length(cost_workerhour)*length(location_fixed_costs)
+    current = 1
 # start the benchmark loop
     for hexsize in grid_sizes
         for pot_ratio in location_scales
-            for fix in location_fixed_costs
+            for μ in profitscales
+                for h in cost_travelhour
+                    for g in cost_workerhour
+                        for fix in location_fixed_costs
+    print("\nIteration ",current," of ",total,".")
+    global current += 1
+
+# load benchmark instances
+    
 
 # load and prepare the input data
 # Load the distance matrix and the number of people
@@ -82,11 +104,9 @@ print("\n\n All neccessary functions are loaded.")
 
 # Calculate the sets for contiguity and compactness constraints
     N,M,card_n,card_m = sets_m_n(distance,adj,hexnum)
-    print("\n The input data was prepared successfully.")
 
 # Calculate Model Parameters
-    β,pp,ts = model_params(hexnum,distance,max_drive,α,μ,people,b,h,mp)
-    print("\n Parameters for the optimisation model were derived.")
+    β,pp,ts = model_params(hexnum,distance,max_drive,α,μ,people,b,h,g,mp)
 
 # Optimise the problem formulation
     dur = @elapsed X,Y,gap,objval = districting_model(optcr::Float64,
@@ -111,23 +131,45 @@ print("\n\n All neccessary functions are loaded.")
     print("\n The optimisation took ",round(dur)," seconds.")
     print("\n The objective value is ",round(objval),".")
 
-# Clean up the results
+    # Clean up the results
     alloc = clean_output(X,hexnum,ts,pp,distance)
     sales_agents = sales_output(alloc)
     plot_time, plot_area = plot_generation(alloc,shape)
 
-# Display the results
-    display(plot_time)
+    # Prepare results for part-time workers or full workers
+    sales_agents_be = sales_output_full(alloc::DataFrame,
+                                        sales_agents::DataFrame,
+                                        people::Vector{Float64},
+                                        β::Array{Float64,2},
+                                        α::Float64,
+                                        μ::Float64,
+                                        b::Float64,
+                                        h::Float64,
+                                        g::Float64)
+
+    # Display the results
     display(plot_area)
-    print("\n",sales_agents)
+    print("\n Gap between both results: ",
+        round((1-sum(sales_agents_be.profit_be)/sum(sales_agents.profit))*100,digits = 4),"%")
 
 # save the results to the benchmark output file
-    push!(benchmark, (grid = hexsize, SCUs = hexnum, scale = pot_ratio, fix_costs = fix,
-            duration = round(dur, digits = 2), objective = round(objval, digits = 2), 
-            locations = nrow(sales_agents), agents = sum(sales_agents[:,:agents]), 
-            agent_profit = round(mean(sales_agents[:,:profit]),digits = 2), 
-            agent_profit_dev = round(std(sales_agents[:,:agent_profit],digits = 2))))
+    push!(benchmark, (grid = hexsize, SCUs = hexnum, 
+        scaleIJ = pot_ratio, 
+        scale_profit = μ, cost_travel = h,
+        cost_worker = g, fix_costs = fix,
+        workertime = max_time,
+        duration              = round(dur, digits = 5), 
+        objective_opt         = round(objval, digits = 5),
+        objective_heur        = round(sum(sales_agents_be.profit_be),digits = 5), 
+        locations             = nrow(sales_agents), 
+        agents_opt            = sum(sales_agents.agents), 
+        agents_heur           = sum(sales_agents_be.agents_be), 
+        agent_profit_dev_opt  = round(std(sales_agents.agent_profit),digits = 2), 
+        agent_profit_dev_heur = round(std(sales_agents_be.agent_profit_be),digits = 2)))
     CSV.write("results/benchmark.csv", benchmark)
+                        end
+                    end
+                end
             end
         end
     end
