@@ -8,15 +8,15 @@ print("\n\n All neccessary functions are loaded.")
     mp          = 0.00::Float64
 
 # Choose the parameters of the salesforcemodel
-    hexsize     = 30::Int64          # size of the hexagons (30, 40, 50, 60)
-    h           = 20.0::Float64      # cost per hour of travel time
-    g           = 30.0::Float64      # cost per worker per hour
-    α           = 10.0::Float64      # per unit profit contribution of sales
+    hexsize     = "msc2014"::String          # size of the hexagons (30, 40, 50, 60)
+    h           = 30.0::Float64      # cost per hour of travel time
+    g           = 50.0::Float64      # cost per worker per hour
+    α           = 5.0::Float64      # per unit profit contribution of sales
     μ           = 1.0::Float64       # scaling parameter
     b           = 0.30::Float64      # calling time elasticity
-    fix         = 20000.0::Float64   # fixed costs for one location
-    max_time    = 1600.0::Float64    # number of hours per salesforce personnel
-    parttime    = 1.0::Float64       # max. fraction of salesforce personnel
+    fix         = 50000.0::Float64   # fixed costs for one location
+    max_time    = 1600.0::Float64     # number of hours per salesforce personnel
+    base_time   = 1600.0::Float64    # max. fraction of salesforce personnel
     max_drive   = 360.0::Float64     # max kilometers to drive
     pot_ratio   = 1.00::Float64      # ratio of potential locations to all BAs
 
@@ -28,8 +28,9 @@ print("\n\n All neccessary functions are loaded.")
     iterlim = 1000000::Int64         # maximal number of iterations
     silent  = false::Bool             # state whether to surpress the optimisation log
 
-# state whether to use CPLEX via GAMS or the open source solver CBC
-    opensource = false
+# state whether to use CPLEX via GAMS or Gurobi
+    const GRB_ENV = Gurobi.Env()
+    gurobi = true
 
 # state the strength of the compactness and contiguity constraints
 # C0 = no contiguity constraints (no compactness)
@@ -40,15 +41,29 @@ print("\n\n All neccessary functions are loaded.")
     compactness = "C0"     
 
 # load and prepare the input data
-    include("model_input.jl")
-    print("\n The input data was prepared successfully.")
- 
+# Load the distance matrix and the number of weight
+    weight   = vec(readdlm("data/weight/weight_$hexsize.csv", Float64))
+    distance = readdlm("data/distance/distance_$hexsize.csv", Float64)
+    shape    = Shapefile.Table("data/geometry/grid_$hexsize.shp")
+
+# Create an adjacency matrix
+    adj = adjacency_matrix(distance)
+
+# Check if preparation was successful
+    size(weight,1) == size(distance,1) == size(distance,2) ? hexnum = size(weight,1) : error("Preparation failed: sizes are different")
+
+# Create random potential locations
+    potloc = random_locations(pot_ratio,hexnum)
+
+# Calculate the sets for contiguity and compactness constraints
+    N,M,card_n,card_m = sets_m_n(distance,adj,hexnum)
+
 # Calculate Model Parameters
-    β,pp,ts = model_params(hexnum,distance,max_drive,α,μ,people,b,h,mp)
-    print("\n Parameters for the optimisation model were derived.")
+    β,pp,ts = model_params(hexnum,distance,max_drive,α,μ,weight,b,h,g,mp)
+    print("\n The input data was prepared successfully.")
 
 # Optimise the problem formulation
-    dur = @elapsed X,Y,gap,objval = districting_model(optcr::Float64,
+    X,gap,objval,dur = districting_model(optcr::Float64,
                                                         reslim::Int64,
                                                         cores::Int64,
                                                         nodlim::Int64,
@@ -65,30 +80,59 @@ print("\n\n All neccessary functions are loaded.")
                                                         M::Array{Bool,3}, 
                                                         card_n::Array{Int64,2},
                                                         card_m::Array{Int64,2},
-                                                        opensource::Bool,
+                                                        gurobi::Bool,
                                                         silent::Bool)
     print("\n The optimisation took ",round(dur)," seconds.")
     print("\n The objective value is ",round(objval),".")
 
 # Clean up the results
     alloc = clean_output(X,hexnum,ts,pp,distance)
-    sales_agents = sales_output(alloc)
+    sales_agents = sales_output(alloc,max_time,fix)
     plot_time, plot_area = plot_generation(alloc,shape)
 
 # Prepare results for part-time workers or full workers
-    sales_agents_be = sales_output_full(alloc::DataFrame,sales_agents::DataFrame)
+    sales_agents_heur = sales_output_full(alloc::DataFrame,
+                                    sales_agents::DataFrame,
+                                    weight::Vector{Float64},
+                                    β::Array{Float64,2},
+                                    α::Float64,
+                                    μ::Float64,
+                                    b::Float64,
+                                    h::Float64,
+                                    g::Float64,
+                                    max_time::Float64,
+                                    fix::Float64)
+
+   # Start the reallocation heuristic to improve the results
+   XI = exchange_heuristic(X,distance,ts,sales_agents,sales_agents_heur)
+   allocI = clean_output(XI,hexnum,ts,pp,distance)
+   plot_timeI, plot_areaI = plot_generation(allocI,shape)
+   display(plot_area)
+   display(plot_areaI)
+
+   sales_agentsI = sales_output(allocI,max_time,fix)
+   sales_agents_heurI = sales_output_full(allocI::DataFrame,
+                                       sales_agentsI::DataFrame,
+                                       weight::Vector{Float64},
+                                       β::Array{Float64,2},
+                                       α::Float64,
+                                       μ::Float64,
+                                       b::Float64,
+                                       h::Float64,
+                                       g::Float64,
+                                       max_time::Float64,
+                                       fix::Float64)
+
+    show(sales_agents)
+    show(sales_agentsI)
 
 # Export the CSV
     CSV.write("results/allocation_$hexsize.csv", alloc)
     CSV.write("results/salesforce_$hexsize.csv", sales_agents)
-    CSV.write("results/salesforce_part_$hexsize.csv", sales_agents_be)
+    CSV.write("results/salesforce_part_$hexsize.csv", sales_agents_heur)
     print("\n Results were prepared and exported.")
 
-# Display the results
-    display(plot_time)
-    display(plot_area)
-    print("\n",sales_agents)
-    print("\n",sales_agents_be)
-
     print("\nGap between both results: ",
-          round((1-sum(sales_agents_be.profit_be)/sum(sales_agents.profit))*100,digits = 4),"%")
+          round((1-sum(sales_agents_heur.profit)/sum(sales_agents.profit))*100,digits = 4),"%")
+    print("\nGap between both results: ",
+          round((1-sum(sales_agents_heurI.profit)/sum(sales_agents.profit))*100,digits = 4),"%")

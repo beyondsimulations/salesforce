@@ -43,8 +43,9 @@ print("\n\n All neccessary functions are loaded.")
     iterlim = 1000000::Int64         # maximal number of iterations
     silent  = true::Bool             # state whether to surpress the optimisation log
 
-# state whether to use CPLEX via GAMS or the open source solver CBC
-    opensource = false
+# state whether to use CPLEX via GAMS or Gurobi
+    const GRB_ENV = Gurobi.Env()
+    gurobi = false
 
 # state the strength of the compactness and contiguity constraints
 # C0 = no contiguity constraints (no compactness)
@@ -61,65 +62,52 @@ print("\n\n All neccessary functions are loaded.")
                 for mp in marginal_profits
 
 # load and prepare the input data
-# Load the distance matrix and the number of people
-    people   = DataFrame(CSV.File("data/people/people_$hexsize.csv"))
-    distance = readdlm("data/distance/distance_$hexsize.csv", ',', Float64)
+# Load the distance matrix and the number of weight
+    weight   = vec(readdlm("data/weight/weight_$hexsize.csv", Float64))
+    distance = readdlm("data/distance/distance_$hexsize.csv", Float64)
     shape    = Shapefile.Table("data/geometry/grid_$hexsize.shp")
-
-# Sort and prepare the number of people
-    people = people[sortperm(people[:,:index]),:]
-    people = people[:,:ewz_real_sum]
-    people = ceil.(people./500, digits = 0)
-
-# Sort and prepare the distance matrix 
-    distance = transpose(distance)
-    distance = distance[sortperm(distance[:,1]),:]
-    distance = distance[2:end,2:end]
-    distance = distance./1000
 
 # Create an adjacency matrix
     adj = adjacency_matrix(distance)
 
 # Check if preparation was successful
-    size(people,1) == size(distance,1) == size(distance,2) ? hexnum = size(people,1) : error("Preparation failed: sizes are different")
+    size(weight,1) == size(distance,1) == size(distance,2) ? hexnum = size(weight,1) : error("Preparation failed: sizes are different")
 
 # Create random potential locations
     potloc = random_locations(pot_ratio,hexnum)
 
 # Calculate the sets for contiguity and compactness constraints
     N,M,card_n,card_m = sets_m_n(distance,adj,hexnum)
-    print("\n The input data was prepared successfully.")
 
 # Calculate Model Parameters
-    β,pp,ts = model_params(hexnum,distance,max_drive,α,μ,people,b,h,mp)
-    print("\n Parameters for the optimisation model were derived.")
+    β,pp,ts = model_params(hexnum,distance,max_drive,α,μ,weight,b,h,g,mp)
 
 # Optimise the problem formulation
-    dur = @elapsed X,Y,gap,objval = districting_model(optcr::Float64,
-                                                        reslim::Int64,
-                                                        cores::Int64,
-                                                        nodlim::Int64,
-                                                        iterlim::Int64,
-                                                        hexnum::Int64,
-                                                        potloc::Vector{Int64},
-                                                        max_drive::Float64,
-                                                        fix::Float64,
-                                                        distance::Array{Float64,2},
-                                                        pp::Array{Float64,2},
-                                                        adj::Array{Bool,2},
-                                                        compactness::String,
-                                                        N::Array{Bool,3},
-                                                        M::Array{Bool,3}, 
-                                                        card_n::Array{Int64,2},
-                                                        card_m::Array{Int64,2},
-                                                        opensource::Bool,
-                                                        silent::Bool)
+    X,Y,gap,objval,dur = districting_model(optcr::Float64,
+                                            reslim::Int64,
+                                            cores::Int64,
+                                            nodlim::Int64,
+                                            iterlim::Int64,
+                                            hexnum::Int64,
+                                            potloc::Vector{Int64},
+                                            max_drive::Float64,
+                                            fix::Float64,
+                                            distance::Array{Float64,2},
+                                            pp::Array{Float64,2},
+                                            adj::Array{Bool,2},
+                                            compactness::String,
+                                            N::Array{Bool,3},
+                                            M::Array{Bool,3}, 
+                                            card_n::Array{Int64,2},
+                                            card_m::Array{Int64,2},
+                                            gurobi::Bool,
+                                            silent::Bool)
     print("\n The optimisation took ",round(dur)," seconds.")
     print("\n The objective value is ",round(objval),".")
 
 # Clean up the results
     alloc = clean_output(X,hexnum,ts,pp,distance)
-    sales_agents = sales_output(alloc)
+    sales_agents = sales_output(alloc,max_time)
     plot_time, plot_area = plot_generation(alloc,shape)
 
 # Display the results
