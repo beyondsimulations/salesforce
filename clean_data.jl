@@ -1,6 +1,6 @@
-version = "30"
-people  = DataFrame(CSV.File("data/weight/weight_$version.csv"))
-people_out = Vector(people[:,:weight])
+version = "msc2014"
+people  = DataFrame(CSV.File("data/weight/weight_$(version)_raw.csv"))
+people_out = Vector(people[:,:weight_ben])
 writedlm("data/weight/weight_$version.csv", people_out)
 
 distance = readdlm("data/distance/distance_$version.csv", ',', Float64)

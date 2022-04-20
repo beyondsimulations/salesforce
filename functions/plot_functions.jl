@@ -18,26 +18,12 @@ function equalize(vec)
     return vec
 end
             
-function plot_generation(alloc::DataFrame,shape::Shapefile.Table)
-    plot_area = plot(size=(500, 600), axis=false, ticks=false)
-    plot_time = plot(size=(500, 600), axis=false, ticks=false)
+function plot_generation_area(alloc::DataFrame,shape::Shapefile.Table)
     if length(unique(alloc.area)) > 1
+        plot_area = plot(axis=false, ticks=false)
         alloc.shape = Shapefile.shapes(shape)
-
-        normalized_values_time = normalize(alloc.time)
         normalized_values_area = equalize(alloc.area)
-
-        colors_time = Array([cgrad(:matter, scale = :exp, categorical = false, rev = true)[value] for value in normalized_values_time])
         colors_area = Array([cgrad(:Pastel1_9, length(unique(alloc.area)), categorical = true)[value] for value in normalized_values_area])
-        
-        for x = 1:nrow(alloc)
-            if alloc[x, :time] > 0
-                plot!(plot_time, alloc[x, :shape], color=colors_time[x])
-            else
-                plot!(plot_area, alloc[x, :shape], color=nothing)
-            end
-        end
-        
         for x = 1:nrow(alloc)
             if alloc[x, :area] == alloc[x, :index]
                 plot!(plot_area, alloc[x, :shape], color=RGB(0/255,0/255,0/255))
@@ -48,5 +34,30 @@ function plot_generation(alloc::DataFrame,shape::Shapefile.Table)
             end
         end
     end
-    return plot_time, plot_area
+    return plot_area
 end
+
+function plot_generation_time(sales_agents::DataFrame, alloc::DataFrame, shape::Shapefile.Table)
+    if length(unique(alloc.area)) > 1
+        plot_time = plot(axis=false, ticks=false)
+        alloc.time .= 0.0
+        dicti = Dict(round(Int64,sales_agents.area[i]) => i for i = 1:nrow(sales_agents))
+        for i = 1:nrow(alloc)
+            alloc.time[i] = sales_agents.hours[dicti[alloc.area[i]]]
+        end
+        alloc.shape = Shapefile.shapes(shape)
+        normalized_values_time = normalize(alloc.time)
+        colors_time = Array([cgrad(:matter, length(unique(alloc.area)), categorical = true)[value] for value in normalized_values_time])
+        for x = 1:nrow(alloc)
+            if alloc[x, :area] == alloc[x, :index]
+                plot!(plot_time, alloc[x, :shape], color=RGB(0/255,0/255,0/255))
+            elseif alloc[x, :time] > 0
+                plot!(plot_time, alloc[x, :shape], color=colors_time[x])
+            else
+                plot!(plot_time, alloc[x, :shape], color=nothing)
+            end
+        end
+    end
+    return plot_time
+end
+
