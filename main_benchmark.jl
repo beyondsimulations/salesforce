@@ -7,10 +7,10 @@ print("\n\n All neccessary functions are loaded.")
 # specify benchmark instances
     grid_sizes           = ["msc2014","30","25","20","15"]
     location_scales      = [1.0]
-    profitscales         = [1.0,2.0,3.0]
-    cost_travelhour      = [20.0,30.0,40.0,50.0]
+    profitvar            = [5.0,10.0,15.0,20.0,25.0]
+    cost_travelhour      = [10.0,20.0,30.0,40.0,50.0]
     cost_workerhour      = [100.0]
-    location_fixed_costs = [10000.0, 20000.0,30000.0,40000.0,50000.0]
+    location_fixed_costs = [10000.0,20000.0,30000.0,40000.0,50000.0]
     time_levels          = [400.0,800.0,1600.0]            
     
 # create a Dataframe for the results of the benchmark
@@ -33,8 +33,8 @@ print("\n\n All neccessary functions are loaded.")
     #hexsize     = 30::Int64         # size of the hexagons (30, 40, 50, 60)
     #h           = 20.0::Float64     # cost per hour of travel time
     #g           = 30.0::Float64     # cost per worker per hour
-    α           = 10.0::Float64      # per unit profit contribution of sales
-    #μ           = 1.0::Float64      # scaling parameter
+    #α           = 10.0::Float64      # per unit profit contribution of sales
+    μ           = 1.0::Float64      # scaling parameter
     b           = 0.30::Float64      # calling time elasticity
     #fix         = 20000.0::Float64  # fixed costs for one location
     #max_time    = 1600.0::Float64   # min hours per salesforce personnel in district (incl. part-time)
@@ -64,13 +64,13 @@ print("\n\n All neccessary functions are loaded.")
     compactness = "C0"    
 
 # number of total benchmarks
-    total = length(grid_sizes)*length(location_scales)*length(profitscales)*
+    total = length(grid_sizes)*length(location_scales)*length(profitvar)*
             length(cost_travelhour)*length(cost_workerhour)*length(location_fixed_costs)
     current = 1
 # start the benchmark loop
     for hexsize in grid_sizes
         for pot_ratio in location_scales
-            for μ in profitscales
+            for α in profitvar
                 for h in cost_travelhour
                     for g in cost_workerhour
                         for fix in location_fixed_costs
@@ -193,7 +193,7 @@ print("\n\n All neccessary functions are loaded.")
         agents_heur           = sum(sales_agents_heur.agents), 
         agent_profit_dev_opt  = round(std(sales_agents.agent_profit),digits = 2), 
         agent_profit_dev_heur = round(std(sales_agents_heur.agent_profit),digits = 2)))
-    CSV.write("results/benchmark_full_new.csv", benchmark)
+    CSV.write("results/benchmark_full_new2.csv", benchmark)
                             end
                         end
                     end
