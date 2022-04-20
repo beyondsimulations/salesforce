@@ -10,11 +10,11 @@ print("\n\n All neccessary functions are loaded.")
 # Choose the parameters of the salesforcemodel
     hexsize     = "msc2014"::String          # size of the hexagons (30, 40, 50, 60)
     h           = 30.0::Float64      # cost per hour of travel time
-    g           = 50.0::Float64      # cost per worker per hour
-    α           = 5.0::Float64      # per unit profit contribution of sales
+    g           = 100.0::Float64     # cost per worker per hour
+    α           = 10.0::Float64       # per unit profit contribution of sales
     μ           = 1.0::Float64       # scaling parameter
     b           = 0.30::Float64      # calling time elasticity
-    fix         = 50000.0::Float64   # fixed costs for one location
+    fix         = 40000.0::Float64   # fixed costs for one location
     max_time    = 1600.0::Float64     # number of hours per salesforce personnel
     base_time   = 1600.0::Float64    # max. fraction of salesforce personnel
     max_drive   = 360.0::Float64     # max kilometers to drive
@@ -108,6 +108,7 @@ print("\n\n All neccessary functions are loaded.")
    allocI = clean_output(XI,hexnum,ts,pp,distance)
    plot_timeI, plot_areaI = plot_generation(allocI,shape)
    display(plot_area)
+   savefig("district.pdf")
    display(plot_areaI)
 
    sales_agentsI = sales_output(allocI,max_time,fix)
