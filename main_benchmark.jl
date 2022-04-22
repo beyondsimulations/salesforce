@@ -7,15 +7,15 @@ print("\n\n All neccessary functions are loaded.")
 # specify benchmark instances
     grid_sizes           = ["msc2014","30","25","20","15"]
     location_scales      = [1.0]
-    profitvar            = [5.0,10.0,15.0,20.0,25.0]
+    profitvar            = [10.0,20.0,30.0,40.0,50.0]
     cost_travelhour      = [10.0,20.0,30.0,40.0,50.0]
-    cost_workerhour      = [100.0]
+    cost_workerhour      = [50.0]
     location_fixed_costs = [10000.0,20000.0,30000.0,40000.0,50000.0]
     time_levels          = [400.0,800.0,1600.0]            
     
 # create a Dataframe for the results of the benchmark
     benchmark = DataFrame(grid = String[], SCUs = Int64[], scaleIJ = Float64[], 
-                          scale_profit = Float64[], cost_travel = Float64[],
+                          profitsale = Float64[], cost_travel = Float64[],
                           cost_worker = Float64[], fix_costs = Float64[],
                           workertime = Float64[], 
                           duration = Float64[], objective_opt = Float64[],
@@ -49,7 +49,7 @@ print("\n\n All neccessary functions are loaded.")
     cores   = 4::Int64               # number of CPU cores
     nodlim  = 1000000::Int64         # maximal number of nodes
     iterlim = 1000000::Int64         # maximal number of iterations
-    silent  = false::Bool             # state whether to surpress the optimisation log
+    silent  = true::Bool             # state whether to surpress the optimisation log
 
 # state whether to use CPLEX via GAMS or Gurobi
     const GRB_ENV = Gurobi.Env()
@@ -126,13 +126,11 @@ print("\n\n All neccessary functions are loaded.")
 
     # Clean up the results
     alloc = clean_output(X,hexnum,ts,pp,distance)
-    plot_time, plot_area = plot_generation(alloc,shape)
+    plot_area = plot_generation_area(alloc,shape)
     display(plot_area)
 
     for max_time in time_levels
-
     sales_agents = sales_output(alloc,max_time,fix)
-    display(sales_agents)
 
     # Prepare results for part-time workers or full workers
     sales_agents_heur = sales_output_full(alloc::DataFrame,
@@ -146,7 +144,6 @@ print("\n\n All neccessary functions are loaded.")
                                         g::Float64,
                                         max_time::Float64,
                                         fix::Float64)
-    display(sales_agents_heur)
 
     # Start the reallocation heuristic to improve the results
     #XI = exchange_heuristic(X,distance,ts,sales_agents,sales_agents_heur)
@@ -174,13 +171,15 @@ print("\n\n All neccessary functions are loaded.")
     #gap_heurI = round((1-(sum(sales_agents_heurI.profit)-sum(sales_agents_heurI.fix_costs))/
     #                   (sum(sales_agentsI.profit)-sum(sales_agentsI.fix_costs)))*100,digits = 6)
 
-    print("\n Time per representative: ",max_time,". Gap between both results: ",gap_heur,"%")
+    print("\n Time per representative: ",max_time,
+          ". Average sales time: ", round(sum(sales_agents_heur.hours)/nrow(sales_agents_heur),digits = 2),
+          ". Gap between both results: ",gap_heur,"%")
     #print("\n Time per representative: ",max_time,". Gap between both results after exchange: ",gap_heurI,"%")
         
 # save the results to the benchmark output file
     push!(benchmark, (grid = hexsize, SCUs = hexnum, 
         scaleIJ = pot_ratio, 
-        scale_profit = μ, cost_travel = h,
+        profitsale = α, cost_travel = h,
         cost_worker = g, fix_costs = fix,
         workertime = max_time,
         duration              = round(dur, digits = 2), 
