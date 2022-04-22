@@ -13,3 +13,11 @@ plot!(t -> p(t,1,0.01,0.3),0,1500,  labels= L"b = 0.3, p(t) = t^b-0.01t",linesty
 
 savefig("profit.pdf")
 
+pd(t,pr,co,el) = pr * el * t^(el-1) - co
+plot(t -> pd(t,1,0,0.4),0,1500,  labels= L"b = 0.4, p(t) = t^b",linestyle = :solid, linewidth = 1.0, legend = :topright, 
+palette = :Dark2_5, xlabel= L"selling time $t$", ylabel=L"profit contribution $p(t)$")
+plot!(t -> pd(t,1,0.01,0.4),0,1500,  labels= L"b = 0.4, p(t) = t^b-0.01t",linestyle = :solid, linewidth = 1.0)
+plot!(t -> pd(t,1,0,0.3),0,1500, size = (450,400), labels= L"b = 0.3, p(t) = t^b", linestyle = :solid, linewidth = 1.0)
+plot!(t -> pd(t,1,0.01,0.3),0,1500,  labels= L"b = 0.3, p(t) = t^b-0.01t",linestyle = :solid, linewidth = 1.0)
+
+savefig("profit_der.pdf")
