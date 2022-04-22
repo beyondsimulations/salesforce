@@ -8,13 +8,13 @@ print("\n\n All neccessary functions are loaded.")
     mp          = 0.00::Float64
 
 # Choose the parameters of the salesforcemodel
-    hexsize     = "msc2014"::String   # size of the hexagons (30, 40, 50, 60)
-    h           = 50.0::Float64       # cost per hour of travel time
-    g           = 80.0::Float64       # cost per worker per hour
-    α           = 15.0::Float64       # per unit profit contribution of sales
+    hexsize     = "15"::String   # size of the hexagons (30, 40, 50, 60)
+    h           = 20.0::Float64       # cost per hour of travel time
+    g           = 50.0::Float64       # cost per worker per hour
+    α           = 20.0::Float64       # per unit profit contribution of sales
     μ           = 1.0::Float64        # scaling parameter
     b           = 0.30::Float64       # calling time elasticity
-    fix         = 50000.0::Float64    # fixed costs for one location
+    fix         = 40000.0::Float64    # fixed costs for one location
     max_time    = 1600.0::Float64     # number of hours per salesforce personnel
     base_time   = 1600.0::Float64     # max. fraction of salesforce personnel
     max_drive   = 360.0::Float64      # max kilometers to drive
@@ -89,6 +89,7 @@ print("\n\n All neccessary functions are loaded.")
     alloc = clean_output(X,hexnum,ts,pp,distance)
     sales_agents = sales_output(alloc,max_time,fix)
     plot_area = plot_generation_area(alloc,shape)
+    savefig("district.pdf")
 
 # Prepare results for part-time workers or full workers
     sales_agents_heur = sales_output_full(alloc::DataFrame,
@@ -103,11 +104,10 @@ print("\n\n All neccessary functions are loaded.")
                                     max_time::Float64,
                                     fix::Float64)
 
-    plot_time = plot_generation_time(sales_agents_heur,alloc,shape)  
+    plot_time = plot_generation_time(sales_agents_heur,alloc,shape)
+    savefig("district_time.pdf") 
     display(plot_area)
-    savefig("district.pdf")
     display(plot_time)
-    savefig("district_time.pdf")
     show(sales_agents)
     show(sales_agents_heur)
 

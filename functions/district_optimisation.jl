@@ -46,7 +46,7 @@ function districting_model(optcr::Float64,
 
 ## Initialise the decision variable X
     if compactness == "C0"
-        @variable(salesforce, 0 <=  X[1:hex,1:hex] <= 1)
+        @variable(salesforce, 0 <=  X[1:hex,1:hex])
     else
         @variable(salesforce, X[1:hex,1:hex], Bin)
     end
