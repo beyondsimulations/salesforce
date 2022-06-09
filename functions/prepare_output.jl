@@ -1,23 +1,26 @@
-function clean_output(X,N,ts,pp,distance)
-    alloc = Array{Float64,2}(undef,N,5) .= 0
-    alloc = DataFrame(alloc, [:index, :area, :time, :profit, :distance])
-    for i = 1:size(alloc,1)
-        alloc[i,1] = i
-        for j = 1:size(alloc,1)
-            if X[i,j] == 1
-                alloc[j, :area] = i
-                alloc[j, :time] = ts[i,j]
-                alloc[j, :profit] = pp[i,j]
-                alloc[j, :distance] = distance[i,j]
+# Function to reduce the output matrix of the decision variable to a Table
+# with all important data
+    function clean_output(X,N,ts,pp,distance)
+        alloc = Array{Float64,2}(undef,N,5) .= 0
+        alloc = DataFrame(alloc, [:index, :area, :time, :profit, :distance])
+        for i = 1:size(alloc,1)
+            alloc[i,1] = i
+            for j = 1:size(alloc,1)
+                if X[i,j] == 1
+                    alloc[j, :area] = i
+                    alloc[j, :time] = ts[i,j]
+                    alloc[j, :profit] = pp[i,j]
+                    alloc[j, :distance] = distance[i,j]
+                end
             end
         end
+        return alloc
     end
-    return alloc
-end
 
+# Function to create a table with the data for each district
 function sales_output(alloc::DataFrame,max_time::Float64,fix::Float64)
     sales_agents = combine(groupby(alloc, :area), :time => sum => :hours, :profit => sum => :profit, nrow => :nr_kge)
-    sales_agents[:,:agents] = round.(sales_agents[:,:hours]./base_time,digits = 2)
+    sales_agents[:,:agents] = round.(sales_agents[:,:hours]./max_time,digits = 2)
     sales_agents[:,:agent_profit] = round.(sales_agents[:,:profit]./sales_agents[:,:agents],digits=2)
     sales_agents[:,:profit] = round.(sales_agents[:,:profit],digits=2)
     sales_agents[:,:fix_costs] .= fix
@@ -25,6 +28,8 @@ function sales_output(alloc::DataFrame,max_time::Float64,fix::Float64)
     return sales_agents
 end
 
+# Function to apply our rounding heuristic to create a table with the data for each district.
+# The heuristic is so far not described in the paper but might be published later.
 function sales_output_full(alloc::DataFrame,
                            sales_agents::DataFrame,
                            people::Vector{Float64},
@@ -59,7 +64,7 @@ function sales_output_full(alloc::DataFrame,
         end
     end
     sales_agents_heur = combine(groupby(alloc, :area), :time_be => sum => :hours, :profit_be => sum => :profit, nrow => :nr_kge)
-    sales_agents_heur[:,:agents] = round.(sales_agents_heur[:,:hours]./base_time,digits = 2)
+    sales_agents_heur[:,:agents] = round.(sales_agents_heur[:,:hours]./max_time,digits = 2)
     sales_agents_heur[:,:agent_profit] = round.(sales_agents_heur[:,:profit]./sales_agents_heur[:,:agents],digits=2)
     sales_agents_heur[:,:profit] = round.(sales_agents_heur[:,:profit],digits=2)
     sales_agents_heur[:,:fix_costs] .= fix

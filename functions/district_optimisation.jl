@@ -1,10 +1,10 @@
-# Districting optimisation model
+# This is the optimisation model used to derive the optimal districts
 function districting_model(optcr::Float64,
                             reslim::Int64,
                             cores::Int64,
                             nodlim::Int64,
                             iterlim::Int64,
-                            hex::Int64,
+                            card_BAs::Int64,
                             potential_locations::Vector{Int64},
                             max_drive::Float64,
                             fix::Float64,
@@ -16,46 +16,27 @@ function districting_model(optcr::Float64,
                             M::Array{Bool,3}, 
                             card_n::Array{Int64,2},
                             card_m::Array{Int64,2},
-                            gurobi::Bool,
                             silent_optimisation::Bool)
 
-# Initialise the GAMS model instance
-    if gurobi == true
-        @suppress begin
-            salesforce = Model(() -> Gurobi.Optimizer(GRB_ENV))
-            set_optimizer_attribute(salesforce, "MIPGap",          optcr)
-            set_optimizer_attribute(salesforce, "TimeLimit",       reslim)
-            set_optimizer_attribute(salesforce, "NodeLimit",       nodlim)
-            set_optimizer_attribute(salesforce, "IterationLimit",  iterlim)
-            MOI.set(salesforce, MOI.NumberOfThreads(), cores)
-        end
-    else
-        salesforce = Model(GAMS.Optimizer)
-        set_optimizer_attribute(salesforce, GAMS.ModelType(), "MIP")
-        set_optimizer_attribute(salesforce, "Solver",    "CPLEX")
-        set_optimizer_attribute(salesforce, "IterLim",   iterlim)
-        set_optimizer_attribute(salesforce, "optCr",     optcr)
-        set_optimizer_attribute(salesforce, "ResLim",    reslim)
-        set_optimizer_attribute(salesforce, "NodLim",    nodlim)
-    end
-    set_optimizer_attribute(salesforce, "threads",    cores)
+# Initialise the Gurobi model instance
+    salesforce = Model(() -> Gurobi.Optimizer(GRB_ENV))
+    set_optimizer_attribute(salesforce, "MIPGap",          optcr)
+    set_optimizer_attribute(salesforce, "TimeLimit",       reslim)
+    set_optimizer_attribute(salesforce, "NodeLimit",       nodlim)
+    set_optimizer_attribute(salesforce, "IterationLimit",  iterlim)
+    MOI.set(salesforce, MOI.NumberOfThreads(), cores)
 
     if silent_optimisation == true
         set_silent(salesforce)
     end
 
 ## Initialise the decision variable X
-    if compactness == "C0"
-        @variable(salesforce, 0 <=  X[1:hex,1:hex])
-    else
-        @variable(salesforce, X[1:hex,1:hex], Bin)
-    end
-
-    for i = 1:hex
+    @variable(salesforce, X[1:card_BAs,1:card_BAs], Bin)
+    for i = 1:card_BAs
         if potential_locations[i] == 0
             set_upper_bound(X[i,i], 0)
         end
-        for j = 1:hex
+        for j = 1:card_BAs
             if drivingtime[i,j] > max_drive
                 set_upper_bound(X[i,j], 0)
             end
@@ -64,43 +45,41 @@ function districting_model(optcr::Float64,
     
 ## Define the objective function                
     @objective(salesforce, Max,
-                    sum(profit[i,j] * X[i,j] for i = 1:hex, j = 1:hex if drivingtime[i,j] < max_drive && potential_locations[i] == 1) - sum(fix * X[i,i] for i = 1:hex if potential_locations[i]==1))
+                    sum(profit[i,j] * X[i,j] for i = 1:card_BAs, j = 1:card_BAs if drivingtime[i,j] < max_drive && potential_locations[i] == 1) - sum(fix * X[i,i] for i = 1:card_BAs if potential_locations[i]==1))
 
 ## Define the p-median constraints
-    @constraint(salesforce, allocate_one[j = 1:hex],
-                    sum(X[i,j] for i = 1:hex if potential_locations[i] == 1) == 1)
-    @constraint(salesforce, cut_nocenter[i = 1:hex, j = 1:hex; drivingtime[i,j] <= max_drive && potential_locations[i] == 1],
+    @constraint(salesforce, allocate_one[j = 1:card_BAs],
+                    sum(X[i,j] for i = 1:card_BAs if potential_locations[i] == 1) == 1)
+    @constraint(salesforce, cut_nocenter[i = 1:card_BAs, j = 1:card_BAs; drivingtime[i,j] <= max_drive && potential_locations[i] == 1],
                     X[i,j] - X[i,i] <= 0)
 
 ## Define the contiguity and compactness constraints
     if compactness == "C0"
-        print("\n Compactness: C0")
+        print("\n Compactness: C0\n")
     end
     if compactness == "C1"
-        print("\n Compactness: C1")
-        @constraint(salesforce, C1[i = 1:hex, j = 1:hex; drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    X[i,j] <= sum(X[i,v] for v = 1:hex if N[i,j,v] == 1))
+        print("\n Compactness: C1\n")
+        @constraint(salesforce, C1[i = 1:card_BAs, j = 1:card_BAs; drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
+                    X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
     end
     if compactness == "C2"
-        print("\n Compactness: C2")
-        @constraint(salesforce, C2a[i = 1:hex, j = 1:hex; card_n[i,j] <= 1 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    X[i,j] <= sum(X[i,v] for v = 1:hex if N[i,j,v] == 1))
-        @constraint(salesforce, C2b[i = 1:hex, j = 1:hex; card_n[i,j] > 1 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    2*X[i,j] <= sum(X[i,v] for v = 1:hex if N[i,j,v] == 1))
+        print("\n Compactness: C2\n")
+        @constraint(salesforce, C2a[i = 1:card_BAs, j = 1:card_BAs; card_n[i,j] <= 1 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
+                    X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
+        @constraint(salesforce, C2b[i = 1:card_BAs, j = 1:card_BAs; card_n[i,j] > 1 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
+                    2*X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
     end
     if compactness == "C3"
-        print("\n Compactness: C3")
-        @constraint(salesforce, C3a[i = 1:hex, j = 1:hex; card_n[i,j] <= 1 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    X[i,j] <= sum(X[i,v] for v = 1:hex if N[i,j,v] == 1))
-        @constraint(salesforce, C3b[i = 1:hex, j = 1:hex; card_n[i,j] > 1 && card_m[i,j] < 5 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    2*X[i,j] <= sum(X[i,v] for v = 1:hex if N[i,j,v] == 1))
-        @constraint(salesforce, C3c[i = 1:hex, j = 1:hex; card_m[i,j] == 5 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    3*X[i,j] <= sum(X[i,v] for v = 1:hex if M[i,j,v] == 1))
+        print("\n Compactness: C3\n")
+        @constraint(salesforce, C3a[i = 1:card_BAs, j = 1:card_BAs; card_n[i,j] <= 1 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
+                    X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
+        @constraint(salesforce, C3b[i = 1:card_BAs, j = 1:card_BAs; card_n[i,j] > 1 && card_m[i,j] < 5 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
+                    2*X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
+        @constraint(salesforce, C3c[i = 1:card_BAs, j = 1:card_BAs; card_m[i,j] == 5 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
+                    3*X[i,j] <= sum(X[i,v] for v = 1:card_BAs if M[i,j,v] == 1))
     end
 
 ## Start the optimisation
-    
-
     if silent_optimisation == true
         @suppress begin
             dur = @elapsed JuMP.optimize!(salesforce)

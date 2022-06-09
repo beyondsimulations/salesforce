@@ -37,12 +37,7 @@ function exchange_heuristic(X,distance,ts,sales_agents,sales_agents_heur)
                 X_greed[new_loca,sku] = 1
                 X_greed[cand_loca,sku] = 0
                 X_now[new] += ts[new_loca,sku]
-                #print("\nDistrict: ",candidate," Loca: ",cand_loca)
-                #print("\nNew District: ",new," OldLoca: ",new_loca)
-                #print("\nGoal: ",X_goal[candidate])
-                #print("\n Improved High! - Before: ", X_now[candidate])
                 X_now[candidate] -= ts[cand_loca,sku]
-                #print(" - After: ", X_now[candidate])
                 possible .= true
             else
                 possible[candidate] = false
@@ -69,17 +64,10 @@ function exchange_heuristic(X,distance,ts,sales_agents,sales_agents_heur)
             end
             if abs(X_now[candidate] - X_goal[candidate] + ts[cand_loca,sku]) < abs(X_now[candidate] - X_goal[candidate]) &&
                 abs(X_now[old_district] - X_goal[old_district] - ts[old_loca,sku]) < abs(X_now[old_district] - X_goal[old_district])
-                #print("\nDistrict: ",candidate," Loca: ",cand_loca)
-                #print("\nOld District: ",old_district," OldLoca: ",old_loca)
                 X_greed[old_loca,sku] = 0
                 X_greed[cand_loca,sku] = 1
-                #print("\nGoal: ",X_goal[candidate])
-                #print("\n Improved Low! - Old Before: ", X_now[old_district])
                 X_now[old_district] -= ts[old_loca,sku]
-                #print(" - After: ", X_now[old_district])
-                #print("\n Improved Low! - Before: ", X_now[candidate])
                 X_now[candidate] += ts[cand_loca,sku]
-                #print(" - After: ", X_now[candidate])
                 possible .= true
             else
                 possible[candidate] = false
