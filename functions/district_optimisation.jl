@@ -20,11 +20,13 @@ function districting_model(optcr::Float64,
 
 # Initialise the Gurobi model instance
     salesforce = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(salesforce, "MIPGap",          optcr)
-    set_optimizer_attribute(salesforce, "TimeLimit",       reslim)
-    set_optimizer_attribute(salesforce, "NodeLimit",       nodlim)
-    set_optimizer_attribute(salesforce, "IterationLimit",  iterlim)
-    MOI.set(salesforce, MOI.NumberOfThreads(), cores)
+    @suppress begin  
+        set_optimizer_attribute(salesforce, "MIPGap",          optcr)
+        set_optimizer_attribute(salesforce, "TimeLimit",       reslim)
+        set_optimizer_attribute(salesforce, "NodeLimit",       nodlim)
+        set_optimizer_attribute(salesforce, "IterationLimit",  iterlim)
+        MOI.set(salesforce, MOI.NumberOfThreads(), cores)
+    end
 
     if silent_optimisation == true
         set_silent(salesforce)

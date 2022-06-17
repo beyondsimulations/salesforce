@@ -9,11 +9,13 @@
 ## All other parameters are Float64 and can be specified as wished.
 ## These vectors are the foundation of the benchmark as each possible
 ## parameter combination will later be calculated.
-    grid_sizes           = ["msc2014","30","25","20","15"]
+    #grid_sizes           = ["msc2014","30","25","20","15"]
+    grid_sizes           = ["15"]
     location_scales      = [1.0]
-    profitvar            = [10.0,20.0,30.0,40.0,50.0]
+    #profitvar            = [10.0,20.0,30.0,40.0,50.0]
+    profitvar            = [50.0]
     cost_travelhour      = [10.0,20.0,30.0,40.0,50.0]
-    cost_workerhour      = [50.0]
+    cost_workerhour      = [40.0,50.0,60.0,70.0,80.0]
     location_fixed_costs = [10000.0,20000.0,30000.0,40000.0,50000.0]
     time_levels          = [400.0,800.0,1600.0]            
     
@@ -40,10 +42,10 @@
 # State the optimisation options
     optcr   = 0.000::Float64         # allowed gap
     reslim  = 10800::Int64           # maximal duration of optimisation in seconds
-    cores   = 4::Int64               # number of CPU cores
-    nodlim  = 1000000::Int64         # maximal number of nodes
-    iterlim = 1000000::Int64         # maximal number of iterations
-    silent  = true::Bool             # state whether to surpress the optimisation log
+    cores   = 8::Int64               # number of CPU cores
+    nodlim  = 100000000000::Int64    # maximal number of nodes
+    iterlim = 100000000000::Int64    # maximal number of iterations
+    silent  = false::Bool            # state whether to surpress the optimisation log
 
 # Create Gurobi environment variable
     const GRB_ENV = Gurobi.Env()
@@ -136,7 +138,7 @@
                                     agents_heur           = sum(sales_agents_heur.agents), 
                                     agent_profit_dev_opt  = round(std(sales_agents.agent_profit),digits = 2), 
                                     agent_profit_dev_heur = round(std(sales_agents_heur.agent_profit),digits = 2)))
-                                CSV.write("results/benchmark_full.csv", benchmark)
+                                CSV.write("results/benchmark_full_15_fin.csv", benchmark)
                                 GC.gc()
                             end
                         end

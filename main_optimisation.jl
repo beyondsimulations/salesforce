@@ -7,12 +7,12 @@
 # Choose the parameters of the salesforcemodel
     mp          = 0.00::Float64       # Choose the marginal profit (mp = 0 for optimal profit)
     hexsize     = "15"::String        # size of the hexagons ("msc2014","30","25","20","15")
-    h           = 20.0::Float64       # cost per hour of travel time
-    g           = 50.0::Float64       # cost per worker per hour
-    α           = 20.0::Float64       # per unit profit contribution of sales
+    h           = 10.0::Float64       # cost per hour of travel time
+    g           = 60.0::Float64       # cost per worker per hour
+    α           = 50.0::Float64       # per unit profit contribution of sales
     μ           = 1.0::Float64        # scaling parameter
     b           = 0.30::Float64       # calling time elasticity
-    fix         = 40000.0::Float64    # fixed costs for one location
+    fix         = 20000.0::Float64    # fixed costs for one location
     max_time    = 1600.0::Float64     # number of hours per salesforce personnel
     max_drive   = 360.0::Float64      # max kilometers to drive
     pot_ratio   = 1.00::Float64       # ratio of potential locations to all BAs
