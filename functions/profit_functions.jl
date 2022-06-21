@@ -6,7 +6,6 @@
 
 # Calculate the time that needs to be spend for the max profit
     function profit_time(mp,α,μ,people,β,b,h,g)
-        #(1/(1-β)) * ((β*h+g+mp)/(α*μ*people*b))^(1/(b-1))
         ((h * β + g + mp)/(α * μ * people * (1-β)^(b) * b))^(1/(b-1))
     end
 

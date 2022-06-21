@@ -5,17 +5,10 @@ function districting_model(optcr::Float64,
                             nodlim::Int64,
                             iterlim::Int64,
                             card_BAs::Int64,
-                            potential_locations::Vector{Int64},
                             max_drive::Float64,
                             fix::Float64,
                             drivingtime::Array{Float64,2},
                             profit::Array{Float64,2},
-                            adjacent::Array{Bool,2},
-                            compactness::String,
-                            N::Array{Bool,3},
-                            M::Array{Bool,3}, 
-                            card_n::Array{Int64,2},
-                            card_m::Array{Int64,2},
                             silent_optimisation::Bool)
 
 # Initialise the Gurobi model instance
@@ -31,6 +24,8 @@ function districting_model(optcr::Float64,
     if silent_optimisation == true
         set_silent(salesforce)
     end
+
+    potential_locations = zeros(Bool, size(profit,1)) .= 1
 
 ## Initialise the decision variable X
     @variable(salesforce, X[1:card_BAs,1:card_BAs], Bin)
@@ -54,32 +49,6 @@ function districting_model(optcr::Float64,
                     sum(X[i,j] for i = 1:card_BAs if potential_locations[i] == 1) == 1)
     @constraint(salesforce, cut_nocenter[i = 1:card_BAs, j = 1:card_BAs; drivingtime[i,j] <= max_drive && potential_locations[i] == 1],
                     X[i,j] - X[i,i] <= 0)
-
-## Define the contiguity and compactness constraints
-    if compactness == "C0"
-        print("\n Compactness: C0\n")
-    end
-    if compactness == "C1"
-        print("\n Compactness: C1\n")
-        @constraint(salesforce, C1[i = 1:card_BAs, j = 1:card_BAs; drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
-    end
-    if compactness == "C2"
-        print("\n Compactness: C2\n")
-        @constraint(salesforce, C2a[i = 1:card_BAs, j = 1:card_BAs; card_n[i,j] <= 1 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
-        @constraint(salesforce, C2b[i = 1:card_BAs, j = 1:card_BAs; card_n[i,j] > 1 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    2*X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
-    end
-    if compactness == "C3"
-        print("\n Compactness: C3\n")
-        @constraint(salesforce, C3a[i = 1:card_BAs, j = 1:card_BAs; card_n[i,j] <= 1 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
-        @constraint(salesforce, C3b[i = 1:card_BAs, j = 1:card_BAs; card_n[i,j] > 1 && card_m[i,j] < 5 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    2*X[i,j] <= sum(X[i,v] for v = 1:card_BAs if N[i,j,v] == 1))
-        @constraint(salesforce, C3c[i = 1:card_BAs, j = 1:card_BAs; card_m[i,j] == 5 && drivingtime[i,j] <= max_drive && adjacent[i,j] == 0 && i != j],
-                    3*X[i,j] <= sum(X[i,v] for v = 1:card_BAs if M[i,j,v] == 1))
-    end
 
 ## Start the optimisation
     if silent_optimisation == true

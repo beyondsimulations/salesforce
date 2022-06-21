@@ -12,12 +12,12 @@
     #grid_sizes           = ["msc2014","30","25","20","15"]
     grid_sizes           = ["15"]
     location_scales      = [1.0]
-    #profitvar            = [10.0,20.0,30.0,40.0,50.0]
-    profitvar            = [50.0]
+    profitvar            = [10.0,20.0,30.0,40.0,50.0]
+    profitvar            = [40.0,50.0]
     cost_travelhour      = [10.0,20.0,30.0,40.0,50.0]
     cost_workerhour      = [40.0,50.0,60.0,70.0,80.0]
     location_fixed_costs = [10000.0,20000.0,30000.0,40000.0,50000.0]
-    time_levels          = [400.0,800.0,1600.0]            
+    time_levels          = [400.0,800.0,1600.0]
     
 # Dataframe for the results of the benchmark
     benchmark = DataFrame(grid = String[], SCUs = Int64[], scaleIJ = Float64[], 
@@ -50,15 +50,6 @@
 # Create Gurobi environment variable
     const GRB_ENV = Gurobi.Env()
 
-# State the strength of the compactness and contiguity constraints
-## C0 = no contiguity constraints (no compactness)
-## C1 = solely contiguity constrains (no compactness)
-## C2 = contiguity and normal ompactness constraints
-## C3 = contiguity and strong compactness constraints
-## For more details take a look at the article "Police Service Districting Planning" by
-## Vlcek, Haase, Fliedner and Cors
-    compactness = "C0"    
-
 # Number of benchmarks instances
     total = length(grid_sizes)*length(location_scales)*length(profitvar)*
             length(cost_travelhour)*length(cost_workerhour)*length(location_fixed_costs)
@@ -71,8 +62,6 @@
                 for h in cost_travelhour
                     for g in cost_workerhour
                         for fix in location_fixed_costs
-
-                            GC.gc()
                             
                             print("\n\nIteration ",current," of ",total,".")
                             global current += 1
@@ -81,22 +70,13 @@
                             distance = readdlm("data/distance/distance_$hexsize.csv", Float64)
                             shape    = Shapefile.Table("data/geometry/grid_$hexsize.shp")
 
-                        # Create adjacency matrix
-                            adj = adjacency_matrix(distance)
-
-                        # Create random potential locations
-                            potloc = random_locations(pot_ratio,length(weight))
-
-                        # Calculate the sets for contiguity and compactness constraints
-                            N,M,card_n,card_m = sets_m_n(distance,adj,length(weight))
-
                         # Calculate Model Parameters
                             β,pp,ts = model_params(length(weight),distance,max_drive,α,μ,weight,b,h,g,mp)
 
                         # Optimise the problem instance
                             X,gap,objval,dur = districting_model(optcr,reslim,cores,nodlim,iterlim,
-                                                                    length(weight),potloc,max_drive,fix,distance,
-                                                                    pp,adj,compactness,N,M, card_n,card_m,silent)
+                                                                    length(weight),max_drive,fix,distance,
+                                                                    pp,silent)
                             print("\n The optimisation took ",round(dur,digits = 2)," seconds.")
                             print("\n The objective value is ",round(objval),".")
 
@@ -138,8 +118,7 @@
                                     agents_heur           = sum(sales_agents_heur.agents), 
                                     agent_profit_dev_opt  = round(std(sales_agents.agent_profit),digits = 2), 
                                     agent_profit_dev_heur = round(std(sales_agents_heur.agent_profit),digits = 2)))
-                                CSV.write("results/benchmark_full_15_fin.csv", benchmark)
-                                GC.gc()
+                                CSV.write("results/benchmark_full_15_fin2.csv", benchmark)
                             end
                         end
                     end
