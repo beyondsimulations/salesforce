@@ -2,6 +2,7 @@
 # optimal calculation of the resulting districts
     import Pkg
     Pkg.activate("salesforce")
+    Pkg.instantiate()
     if Sys.iswindows()
         ENV["GUROBI_HOME"] = "C:\\gurobi912\\win64"
         Pkg.add("Gurobi")
